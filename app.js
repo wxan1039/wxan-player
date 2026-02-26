@@ -4,7 +4,11 @@ const statusEl = document.getElementById("status");
 const btnText = document.getElementById("btnText");
 const btnIcon = document.getElementById("btnIcon");
 
+const streamURL = "https://ice8.securenetsystems.net/WXAN";
+const adURL = "https://wxan1039.github.io/wxan-player/commercial.mp3";   // upload this to GitHub
+
 let playing = false;
+let playedAd = false;
 
 function setUI(state, message) {
   playing = state;
@@ -16,9 +20,19 @@ function setUI(state, message) {
 btn.addEventListener("click", async () => {
   try {
     if (!playing) {
-      // iOS requires this to be initiated by a user gesture (the button click counts)
+
+      if (!playedAd) {
+        playedAd = true;
+        audio.src = adURL;
+        statusEl.textContent = "Playing sponsor message…";
+      } else {
+        audio.src = streamURL;
+        statusEl.textContent = "Connecting to WXAN…";
+      }
+
       await audio.play();
       setUI(true, "Playing");
+
     } else {
       audio.pause();
       setUI(false, "Paused");
@@ -29,14 +43,10 @@ btn.addEventListener("click", async () => {
   }
 });
 
-audio.addEventListener("waiting", () => setUI(true, "Buffering…"));
-audio.addEventListener("playing", () => setUI(true, "Playing"));
-audio.addEventListener("pause", () => setUI(false, "Paused"));
-audio.addEventListener("error", () => setUI(false, "Stream error"));
-
-// Register service worker (for installability + caching shell)
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => {});
-  });
-}
+audio.addEventListener("ended", async () => {
+  if (playedAd && audio.src.includes("commercial.mp3")) {
+    audio.src = streamURL;
+    await audio.play();
+    setUI(true, "Playing");
+  }
+});
